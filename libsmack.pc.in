@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=@EXEC_PREFIX@
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: smack
+Description: Smack LSM module userspace library
+Requires:
+Version: @VERSION@
+Libs: -L${libdir} -lsmack
+Cflags: -I${includedir}

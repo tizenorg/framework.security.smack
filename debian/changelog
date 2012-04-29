@@ -1,0 +1,29 @@
+smack (1.0-rc4slp2+s3) unstable; urgency=low
+
+  * change build method: automake -> cmake
+  * Git: slp/pkgs/s/smack
+  * Tag: smack_1.0-rc4slp2+s3
+
+ -- Kidong Kim <kd0228.kim@samsung.com>  Tue, 13 Mar 2012 14:45:03 +0900
+
+smack (1.0-rc4slp2+s2) unstable; urgency=low
+
+  * add booting scripts
+  * Git: slp/pkgs/s/smack
+  * Tag: smack_1.0-rc4slp2+s2
+
+ -- Kidong Kim <kd0228.kim@samsung.com>  Thu, 08 Mar 2012 11:31:08 +0900
+
+smack (1.0-rc4slp2+s1) unstable; urgency=low
+
+  * Initial release
+  * Git: slp/pkgs/s/smack
+  * Tag: smack_1.0-rc4slp2+s1
+
+ -- Kidong Kim <kd0228.kim@samsung.com>  Tue, 06 Mar 2012 09:44:59 +0900
+
+smack (1.0-rc4) unstable; urgency=low
+
+  * Initial package release for debian
+
+ -- Brian McGillion <brian.mcgillion@intel.com>  Thu, 23 Feb 2012 14:00:09 +0900
