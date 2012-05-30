@@ -5,6 +5,7 @@ Release:    rc4slp2+s2
 Group:      System/Libraries
 License:    LGPL2.1
 Source:    smack-%{version}.tar.gz
+Source1001: packaging/smack.manifest 
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
@@ -36,6 +37,7 @@ SMACK utility executables
 
 
 %build
+cp %{SOURCE1001} .
 cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
 
 
@@ -76,17 +78,20 @@ ln -s /etc/rc.d/init.d/smack-app /etc/rc.d/rc5.d/S08smack-app
 
 
 %files
+%manifest smack.manifest
 %defattr(-,root,root,-)
 /usr/lib/libsmack.so.1
 /usr/lib/libsmack.so.1.0.0
 
 %files devel
+%manifest smack.manifest
 %defattr(-,root,root,-)
 /usr/lib/libsmack.so
 /usr/include/sys/smack.h
 /usr/lib/pkgconfig/libsmack.pc
 
 %files utils
+%manifest smack.manifest
 %defattr(-,root,root.-)
 /bin/chsmack
 /usr/bin/smackaccess
