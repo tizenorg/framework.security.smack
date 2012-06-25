@@ -1,0 +1,7 @@
+diff -rupN libsmack-1.0rc4/init/Makefile.am libsmack-1.0rc4-new/init/Makefile.am
+--- libsmack-1.0rc4/init/Makefile.am	2012-02-06 07:03:01.000000000 -0800
++++ libsmack-1.0rc4-new/init/Makefile.am	2012-04-05 13:27:49.732958833 -0700
+@@ -1,2 +1,2 @@
+-initdir = /lib/systemd/system
++initdir = /usr/lib/systemd/system
+ init_DATA = smack.mount smack.service

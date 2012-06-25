@@ -1,0 +1,32 @@
+diff -Nurb libsmack-1.0rc4/init/smack.mount libsmack-1.0rc4-new/init/smack.mount
+--- libsmack-1.0rc4/init/smack.mount	2012-02-06 07:03:01.000000000 -0800
++++ libsmack-1.0rc4-new/init/smack.mount	2012-04-27 11:03:50.356163965 -0700
+@@ -1,8 +1,11 @@
++
+ [Unit]
+ Description=Smack filesystem mounting
++DefaultDependencies=no
+ Before=local-fs.target
+ 
+ [Mount]
+ What=smackfs
+ Where=/smack
+ Type=smackfs
++
+diff -Nurb libsmack-1.0rc4/init/smack.service libsmack-1.0rc4-new/init/smack.service
+--- libsmack-1.0rc4/init/smack.service	2012-02-06 07:03:01.000000000 -0800
++++ libsmack-1.0rc4-new/init/smack.service	2012-04-27 11:06:02.771176224 -0700
+@@ -1,8 +1,13 @@
++
+ [Unit]
+ Description=Smack
++DefaultDependencies=no
++After=smack.mount
++Requires=smack.mount
+ After=basic.target
+ 
+ [Service]
+ ExecStart=/usr/bin/smackctl apply
+ ExecStop=/usr/bin/smackctl clear
+ RemainAfterExit=yes
++
