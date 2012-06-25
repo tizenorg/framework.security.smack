@@ -9,9 +9,6 @@ Source1001: packaging/smack.manifest
 Patch0:     0001-systemd-path-change.patch
 Patch1:     0002-libsmack-fix-unit-file-ordering.patch
 
-Requires(post): /usr/bin/systemctl
-Requires(pre): /usr/bin/systemctl
-Requires(postun): /usr/bin/systemctl
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
@@ -55,16 +52,9 @@ mkdir -p ${RPM_BUILD_ROOT}%{_sysconfdir}/smack/accesses.d
 mkdir -p ${RPM_BUILD_ROOT}%{_sysconfdir}/smack/cipso.d
 mkdir -p ${RPM_BUILD_ROOT}%{_libdir}/systemd/system/local-fs.target.wants/
 mkdir -p ${RPM_BUILD_ROOT}%{_libdir}/systemd/system/basic.target.wants/
-
-if [ ! -e %{_sysconfdir}/rc.d/rc3.d ] ; then
-    mkdir -p ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc3.d
-fi
-if [ ! -e %{_sysconfdir}/rc.d/rc4.d ] ; then
-    mkdir -p ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc4.d
-fi
-if [ ! -e %{_sysconfdir}/rc.d/rc5.d ] ; then
-    mkdir -p ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc5.d
-fi
+mkdir -p ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc3.d
+mkdir -p ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc4.d
+mkdir -p ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc5.d
 
 install -m0644 init/smack.mount ${RPM_BUILD_ROOT}%{_libdir}/systemd/system/
 install -m0644 init/smack.service ${RPM_BUILD_ROOT}%{_libdir}/systemd/system/
@@ -77,24 +67,12 @@ ln -s %{_sysconfdir}/rc.d/init.d/smack-app ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d
 ln -s %{_sysconfdir}/rc.d/init.d/smack-app ${RPM_BUILD_ROOT}/%{_sysconfdir}/rc.d/rc5.d/S08smack-app
 
 %post utils
-systemctl daemon-reload
-systemctl restart smack.service
-if [ ! -e %{_sysconfdir}/smack/accesses ] ; then
-    touch %{_sysconfdir}/smack/accesses
-fi
-if [ ! -e %{_sysconfdir}/smack/cipso ] ; then
-    touch %{_sysconfdir}/smack/cipso
-fi
-
-%preun utils
-systemctl stop smack.service
+touch %{_sysconfdir}/smack/accesses
+touch %{_sysconfdir}/smack/cipso
 
 # Base package - Shutdown service
-%preun 
-systemctl stop smack.service
 %postun -p /sbin/ldconfig
 %post -p /sbin/ldconfig
-
 
 %files
 %manifest smack.manifest
