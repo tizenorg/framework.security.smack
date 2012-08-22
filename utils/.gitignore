@@ -1,0 +1,10 @@
+.deps/
+.libs/
+smackaccess
+smackctl
+smackself
+smackcipso
+smackd
+smackload
+chsmack
+*.o

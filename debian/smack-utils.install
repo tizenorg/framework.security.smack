@@ -1,8 +1,1 @@
-/bin/chsmack
-/usr/bin/smackaccess
-/sbin/smackcipso
-/usr/bin/smackctl
-/sbin/smackload
-/usr/bin/smackd
-/etc/rc.d/init.d/smack-def
-/etc/rc.d/init.d/smack-app
+usr/bin/*

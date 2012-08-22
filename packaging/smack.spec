@@ -1,98 +1,95 @@
-Name:	    smack
-Summary:    SMACK library and utility executables
-Version:    1.0
-Release:    rc4slp2+s2
-Group:      System/Libraries
-License:    LGPL2.1
-Source:    smack-%{version}.tar.gz
-Requires(post): /sbin/ldconfig
-Requires(postun): /sbin/ldconfig
+Name:       smack
+Version:    1.0slp2+s4
+Release:    1
+Summary:    Package to interact with Smack
+Group:      System/Kernel
+License:    LGPLv2
+URL:        https://github.com/organizations/smack-team/smack
+Source0:    smack-%{version}.tar.gz
+BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires: cmake
-
+BuildRequires: automake autoconf libtool
 
 %description
-SMACK library and utility executables
-
+Library allows applications to work with Smack
 
 %package devel
-Summary:    SMACK library header
+Summary:    Developmnent headers and libs for libsmack
 Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
+%description devel
+Standard header files for use when developing Smack enabled applications
+
 %package utils
-Summary:	SMACK utility executables
-Group:		System/Executables
+Summary:    Selection of tools for developers working with Smack
+Group:      System/Kernel
 Requires:   %{name} = %{version}-%{release}
 
-%description devel
-SMACK library  (developement files)
-
 %description utils
-SMACK utility executables
+Tools provided to load and unload rules from the kernel and query the policy
 
 %prep
 %setup -q
-
+autoreconf --install --symlink
 
 %build
-cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
-
-
-make %{?jobs:-j%jobs}
+%configure
+make %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
-%make_install
+make install DESTDIR=%{buildroot}
+install -d %{buildroot}/smack
+install -d %{buildroot}/etc
+install -D -d %{buildroot}/opt/etc/smack/access.d
+install -D -d %{buildroot}/opt/etc/smack/cipso.d
+install -D -d %{buildroot}/opt/etc/rc.d/rc3.d/
+install -D -d %{buildroot}/opt/etc/rc.d/rc4.d/
+install -D init/smack.rc %{buildroot}/etc/init.d/smack-utils
+ln -sf /opt/etc/smack %{buildroot}/etc/
+ln -sf /etc/init.d/smack-utils %{buildroot}/opt/etc/rc.d/rc3.d/S07smack
+ln -sf /etc/init.d/smack-utils %{buildroot}/opt/etc/rc.d/rc4.d/S07smack
+rm -rf %{buildroot}/%{_docdir}
 
-%post utils
-mkdir -p /smack
-mkdir -p /opt/etc/smack
-mkdir -p /opt/etc/smack/accesses.d
-mkdir -p /opt/etc/smack/cipso.d
-
-if [ ! -e /opt/etc/smack/accesses ] ; then
-    touch /opt/etc/smack/accesses
-fi
-if [ ! -e /opt/etc/smack/cipso ] ; then
-    touch /opt/etc/smack/cipso
-fi
-
-if [ ! -e /etc/smack ] ; then
-    ln -s /opt/etc/smack /etc/smack
-fi
-
-mkdir -p /etc/rc.d/rc3.d
-mkdir -p /etc/rc.d/rc4.d
-mkdir -p /etc/rc.d/rc5.d
-ln -s /etc/rc.d/init.d/smack-def /etc/rc.d/rc3.d/S07smack-def
-ln -s /etc/rc.d/init.d/smack-def /etc/rc.d/rc4.d/S07smack-def
-ln -s /etc/rc.d/init.d/smack-app /etc/rc.d/rc3.d/S08smack-app
-ln -s /etc/rc.d/init.d/smack-app /etc/rc.d/rc5.d/S08smack-app
+%clean
+rm -rf %{buildroot}
 
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
 
-
 %files
-%defattr(-,root,root,-)
-/usr/lib/libsmack.so.1
-/usr/lib/libsmack.so.1.0.0
+%defattr(644,root,root,755)
+%{_libdir}/libsmack.so.*
 
 %files devel
-%defattr(-,root,root,-)
-/usr/lib/libsmack.so
-/usr/include/sys/smack.h
-/usr/lib/pkgconfig/libsmack.pc
+%defattr(644,root,root,755)
+%{_includedir}/*
+%{_libdir}/libsmack.so
+%{_libdir}/libsmack.la
+%{_libdir}/pkgconfig/*
+%{_mandir}/man3/*
 
 %files utils
-%defattr(-,root,root.-)
-/bin/chsmack
-/usr/bin/smackaccess
-/sbin/smackcipso
-/usr/bin/smackctl
-/sbin/smackload
-/usr/bin/smackd
-/etc/rc.d/init.d/smack-def
-/etc/rc.d/init.d/smack-app
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_bindir}/*
+%attr(755,root,root) /etc/init.d/smack-utils
+/etc/smack
+/opt/etc/*
+/smack/
+%{_mandir}/man1/*
+%{_mandir}/man8/*
+
+%changelog
+* Thu Jul 30 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s4
+- Rebuild, no source changes.
+
+* Thu Jul 19 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s3
+- Rebuild, change versioning schema.
+
+* Wed Jul 11 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0-slp2+s2
+- Release with my source patches after review with the upstream maintainer.
+
+* Wed May  9 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0-slp2+s1
+- Initial spec file

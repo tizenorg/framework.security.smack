@@ -41,13 +41,14 @@
 #define LEVEL_MAX 255
 #define NUM_LEN 4
 
-#define CIPSO_POS(i)   (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
+#define CIPSO_POS(i)   (SMACK_LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
 #define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
+#define CIPSO_NUM_LEN_STR "%-4d"
 
 #define BUF_SIZE 512
 
 struct cipso_mapping {
-	char label[LABEL_LEN + 1];
+	char label[SMACK_LABEL_LEN + 1];
 	int cats[CAT_MAX_VALUE];
 	int ncats;
 	int level;
@@ -60,9 +61,8 @@ struct cipso {
 };
 
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-static int apply_cipso_file(const char *path);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-static struct cipso *cipso_new(const char *path);
+static struct cipso *cipso_new(int fd);
 static void cipso_free(struct cipso *cipso);
 static int cipso_apply(struct cipso *cipso);
 
@@ -92,7 +92,7 @@ int clear(void)
 	if (is_smackfs_mounted() != 1)
 		return -1;
 
-	fd = open(SMACKFS_MNT "/load", O_RDONLY);
+	fd = open(SMACKFS_MNT "/load2", O_RDONLY);
 	if (fd < 0)
 		return -1;
 
@@ -126,6 +126,7 @@ int apply_rules(const char *path, int clear)
 int apply_cipso(const char *path)
 {
 	struct stat sbuf;
+	int fd;
 	int ret;
 
 	errno = 0;
@@ -133,14 +134,15 @@ int apply_cipso(const char *path)
 		return -1;
 
 	if (S_ISDIR(sbuf.st_mode))
-		ret = nftw(path, apply_cipso_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
-	else
-		ret = apply_cipso_file(path);
+		return nftw(path, apply_cipso_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
 
-	if (ret)
+	fd = open(path, O_RDONLY);
+	if (fd < 0)
 		return -1;
 
-	return 0;
+	ret = apply_cipso_file(fd);
+	close(fd);
+	return ret;
 }
 
 int apply_rules_file(int fd, int clear)
@@ -166,12 +168,12 @@ int apply_rules_file(int fd, int clear)
 	return ret;
 }
 
-static int apply_cipso_file(const char *path)
+int apply_cipso_file(int fd)
 {
 	struct cipso *cipso = NULL;
 	int ret;
 
-	cipso = cipso_new(path);
+	cipso = cipso_new(fd);
 	if (cipso == NULL)
 		return -1;
 
@@ -204,14 +206,24 @@ static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag
 
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
+	int fd;
+	int ret;
+
 	if (typeflag == FTW_D)
 		return ftwbuf->level ? FTW_SKIP_SUBTREE : FTW_CONTINUE;
 	else if (typeflag != FTW_F)
 		return FTW_STOP;
-	return apply_cipso_file(fpath) ? FTW_STOP : FTW_CONTINUE;
+
+	fd = open(fpath, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
+	close(fd);
+	return ret;
 }
 
-static struct cipso *cipso_new(const char *path)
+static struct cipso *cipso_new(int fd)
 {
 	struct cipso *cipso = NULL;
 	struct cipso_mapping *mapping = NULL;
@@ -220,10 +232,17 @@ static struct cipso *cipso_new(const char *path)
 	char *label, *level, *cat, *ptr;
 	long int val;
 	int i;
+	int newfd;
 
-	file = fopen(path, "r");
-	if (file == NULL)
+	newfd = dup(fd);
+	if (newfd == -1)
 		return NULL;
+
+	file = fdopen(newfd, "r");
+	if (file == NULL) {
+		close(newfd);
+		return NULL;
+	}
 
 	cipso = calloc(sizeof(struct cipso), 1);
 	if (cipso == NULL) {
@@ -240,7 +259,7 @@ static struct cipso *cipso_new(const char *path)
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
 		if (label == NULL || cat == NULL || level == NULL ||
-		    strlen(label) > LABEL_LEN) {
+		    strlen(label) > SMACK_LABEL_LEN) {
 			errno = EINVAL;
 			goto err_out;
 		}
@@ -319,17 +338,17 @@ static int cipso_apply(struct cipso *cipso)
 	int fd;
 	int i;
 
-	fd = open(SMACKFS_MNT "/cipso", O_WRONLY);
+	fd = open(SMACKFS_MNT "/cipso2", O_WRONLY);
 	if (fd < 0)
 		return -1;
 
 	for (m = cipso->first; m != NULL; m = m->next) {
-		sprintf(buf, "%-23s ", m->label);
-		sprintf(&buf[LABEL_LEN + 1], "%-4d", m->level);
-		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], "%-4d", m->ncats);
+		sprintf(buf, "%s ", m->label);
+		sprintf(&buf[SMACK_LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
+		sprintf(&buf[SMACK_LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
 
 		for (i = 0; i < m->ncats; i++)
-			sprintf(&buf[CIPSO_POS(i)], "%-4d", m->cats[i]);
+			sprintf(&buf[CIPSO_POS(i)], CIPSO_NUM_LEN_STR, m->cats[i]);
 
 		if (write(fd, buf, strlen(buf)) < 0) {
 			close(fd);
