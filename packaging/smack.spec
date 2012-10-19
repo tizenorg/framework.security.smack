@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s4
+Version:    1.0slp2+s6
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -42,14 +42,14 @@ rm -rf %{buildroot}
 make install DESTDIR=%{buildroot}
 install -d %{buildroot}/smack
 install -d %{buildroot}/etc
-install -D -d %{buildroot}/opt/etc/smack/access.d
+install -D -d %{buildroot}/opt/etc/smack/accesses.d
 install -D -d %{buildroot}/opt/etc/smack/cipso.d
-install -D -d %{buildroot}/opt/etc/rc.d/rc3.d/
-install -D -d %{buildroot}/opt/etc/rc.d/rc4.d/
+install -D -d %{buildroot}/etc/rc.d/rc3.d/
+install -D -d %{buildroot}/etc/rc.d/rc4.d/
 install -D init/smack.rc %{buildroot}/etc/init.d/smack-utils
 ln -sf /opt/etc/smack %{buildroot}/etc/
-ln -sf /etc/init.d/smack-utils %{buildroot}/opt/etc/rc.d/rc3.d/S07smack
-ln -sf /etc/init.d/smack-utils %{buildroot}/opt/etc/rc.d/rc4.d/S07smack
+ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc3.d/S07smack
+ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc4.d/S07smack
 rm -rf %{buildroot}/%{_docdir}
 
 %clean
@@ -76,12 +76,21 @@ rm -rf %{buildroot}
 %attr(755,root,root) %{_bindir}/*
 %attr(755,root,root) /etc/init.d/smack-utils
 /etc/smack
+/etc/rc.d/*
 /opt/etc/*
 /smack/
 %{_mandir}/man1/*
 %{_mandir}/man8/*
 
 %changelog
+* Mon Sep 17 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s6
+- Modified typo access.d --> accesses.d
+- packaging: fix location of symlinks to smack-utils init script.
+- Merge with upstream.
+
+* Thu Aug  1 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s5
+- Rebuild, no source changes.
+
 * Thu Jul 30 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s4
 - Rebuild, no source changes.
 
