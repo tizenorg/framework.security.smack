@@ -83,6 +83,9 @@ rm -rf %{buildroot}
 %{_mandir}/man8/*
 
 %changelog
+* Thu Oct 25 2012 Tomasz Swierczek <t.swieczek@samsung.com> - 1.0slp2+s6
+- No changes, re-release to proper OBS project on tizendev.
+
 * Mon Sep 17 2012 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s6
 - Modified typo access.d --> accesses.d
 - packaging: fix location of symlinks to smack-utils init script.
