@@ -83,6 +83,9 @@ rm -rf %{buildroot}
 %{_mandir}/man8/*
 
 %changelog
+* Mon Oct 29 2012 Tomasz Swierczek <t.swieczek@samsung.com> - 1.0slp2+s6
+- No changes, re-release to proper OBS project on tizendev.
+
 * Thu Oct 25 2012 Tomasz Swierczek <t.swieczek@samsung.com> - 1.0slp2+s6
 - No changes, re-release to proper OBS project on tizendev.
 
