@@ -474,14 +474,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int size;
 
 	load_fd = open(SMACKFS_MNT "/load2", O_WRONLY);
-	if (load_fd < 0)
-		return -1;
-
 	change_fd = open(SMACKFS_MNT "/change-rule", O_WRONLY);
-	if (change_fd < 0) {
-		close(load_fd);
-		return -1;
-	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
 		fd = load_fd;
@@ -500,23 +493,25 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 			}
 		}
 
-		if (size == -1 || size > LOAD_LEN) {
-			close(load_fd);
-			close(change_fd);
-			return -1;
+		if (size == -1 || size > LOAD_LEN || fd == -1) {
+			ret = -1;
+			goto err_out;
 		}
 
 		ret = write(fd, buf, size);
 		if (ret < 0) {
-			close(load_fd);
-			close(change_fd);
-			return -1;
+			ret = -1;
+			goto err_out;
 		}
 	}
+	ret = 0;
 
-	close(load_fd);
-	close(change_fd);
-	return 0;
+err_out:
+	if (load_fd >= 0)
+		close(load_fd);
+	if (change_fd >= 0)
+		close(change_fd);
+	return ret;
 }
 
 static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
