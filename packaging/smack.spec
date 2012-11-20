@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s7
+Version:    1.0slp2+s8
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -34,7 +34,7 @@ Tools provided to load and unload rules from the kernel and query the policy
 autoreconf --install --symlink
 
 %build
-%configure
+%configure --with-systemdsystemunitdir=%{_libdir}/systemd/system
 make %{?_smp_mflags}
 
 %install
@@ -50,6 +50,10 @@ install -D init/smack.rc %{buildroot}/etc/init.d/smack-utils
 ln -sf /opt/etc/smack %{buildroot}/etc/
 ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc3.d/S01smack
 ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc4.d/S01smack
+install -D -d %{buildroot}%{_libdir}/systemd/system/local-fs.target.wants
+install -D -d %{buildroot}%{_libdir}/systemd/system/basic.target.wants
+ln -sf ../%{name}.mount %{buildroot}%{_libdir}/systemd/system/local-fs.target.wants/
+ln -sf ../%{name}.service %{buildroot}%{_libdir}/systemd/system/basic.target.wants/
 rm -rf %{buildroot}/%{_docdir}
 
 %clean
@@ -77,12 +81,19 @@ rm -rf %{buildroot}
 %attr(755,root,root) /etc/init.d/smack-utils
 /etc/smack
 /etc/rc.d/*
+%{_libdir}/systemd/system/%{name}.mount
+%{_libdir}/systemd/system/local-fs.target.wants/%{name}.mount
+%{_libdir}/systemd/system/%{name}.service
+%{_libdir}/systemd/system/basic.target.wants/%{name}.service
 /opt/etc/*
 /smack/
 %{_mandir}/man1/*
 %{_mandir}/man8/*
 
 %changelog
+* Wed Dec 10 2012 Jacek Migacz <j.migacz@samsung.com> - 1.0slp2+s8
+- Add systemd support scripts.
+
 * Mon Nov 26 2012 Kidong Kim <kd0228.kim@samsung.com> - 1.0slp2+s7
 - fix initialization script order : S07 -> S01
 
