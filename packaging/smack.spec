@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s6
+Version:    1.0slp2+s7
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -48,8 +48,8 @@ install -D -d %{buildroot}/etc/rc.d/rc3.d/
 install -D -d %{buildroot}/etc/rc.d/rc4.d/
 install -D init/smack.rc %{buildroot}/etc/init.d/smack-utils
 ln -sf /opt/etc/smack %{buildroot}/etc/
-ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc3.d/S07smack
-ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc4.d/S07smack
+ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc3.d/S01smack
+ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc4.d/S01smack
 rm -rf %{buildroot}/%{_docdir}
 
 %clean
@@ -83,6 +83,9 @@ rm -rf %{buildroot}
 %{_mandir}/man8/*
 
 %changelog
+* Mon Nov 26 2012 Kidong Kim <kd0228.kim@samsung.com> - 1.0slp2+s7
+- fix initialization script order : S07 -> S01
+
 * Mon Oct 29 2012 Tomasz Swierczek <t.swieczek@samsung.com> - 1.0slp2+s6
 - No changes, re-release to proper OBS project on tizendev.
 
