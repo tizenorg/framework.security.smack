@@ -522,7 +522,7 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		out[i] = '-';
 	out[ACC_LEN] = '\0';
 
-	for (i = 0; i < ACC_LEN && in[i] != '\0'; i++)
+	for (i = 0; in[i] != '\0'; i++)
 		switch (in[i]) {
 		case 'r':
 		case 'R':
