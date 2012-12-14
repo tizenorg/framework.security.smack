@@ -412,7 +412,7 @@ static int internal_setlabel(void* file, const char* label,
 	}
 
 	if (label == NULL || label[0] == '\0') {
-		return removefunc(file, label);
+		return removefunc(file, xattr_name);
 	} else {
 		int len = strnlen(label, SMACK_LABEL_LEN + 1);
 		if (len > SMACK_LABEL_LEN)
