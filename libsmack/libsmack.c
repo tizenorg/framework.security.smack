@@ -400,6 +400,7 @@ static int internal_setlabel(void* file, const char* label,
 		setxattr_func setfunc, removexattr_func removefunc)
 {
 	char* xattr_name = get_xattr_name(type);
+	int ret;
 
 	/* Check validity of labels for LABEL_TRANSMUTE */
 	if (type == SMACK_LABEL_TRANSMUTE && label != NULL) {
@@ -412,7 +413,10 @@ static int internal_setlabel(void* file, const char* label,
 	}
 
 	if (label == NULL || label[0] == '\0') {
-		return removefunc(file, xattr_name);
+		ret = removefunc(file, xattr_name);
+		if (ret == -1 && errno == ENODATA)
+			return 0;
+		return ret;
 	} else {
 		int len = strnlen(label, SMACK_LABEL_LEN + 1);
 		if (len > SMACK_LABEL_LEN)
