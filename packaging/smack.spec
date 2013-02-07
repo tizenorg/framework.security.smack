@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s8
+Version:    1.0slp2+s9
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -91,6 +91,13 @@ rm -rf %{buildroot}
 %{_mandir}/man8/*
 
 %changelog
+* Thu Feb 07 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s9
+- Polish init script.
+- execute init script between local-fs.target and basic.target.
+- libsmack: fix access type parsing.
+- libsmack: fix label removal.
+- Don't fail when removing label from file, that doesn't have it.
+
 * Wed Dec 10 2012 Jacek Migacz <j.migacz@samsung.com> - 1.0slp2+s8
 - Add systemd support scripts.
 
