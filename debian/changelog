@@ -1,0 +1,43 @@
+smack (1.0slp2+s6) unstable; urgency=low
+
+  [ Bumjin Im ]
+  * Modified typo access.d --> accesses.d
+
+  [ Rafal Krypa ]
+  * packaging: fix location of symlinks to smack-utils init script.
+  * Merge with upstream.
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Mon, 17 Sep 2012 10:40:12 +0200
+
+smack (1.0slp2+s5) unstable; urgency=low
+
+  * Rebuild, no source changes.
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Wed, 01 Aug 2012 12:04:22 +0200
+
+smack (1.0slp2+s4) unstable; urgency=low
+
+  * Rebuild, no source changes.
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Thu, 30 Jul 2012 11:43:03 +0200
+
+smack (1.0slp2+s3) unstable; urgency=low
+
+  * Rebuilding the package in OBS. No source changes has been made.
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Thu, 19 Jul 2012 15:17:03 +0200
+
+smack (1.0slp2+s2) unstable; urgency=low
+
+  * Merge with upstream master branch.
+  * Fix inconsistent init script names.
+  * Install missing manual page links for library functions.
+  * libsmack: add API for revoking all rules for a subject label.
+  * libsmack: add support for modification rules.
+  * libsmack: add function for setting current process label.
+  * Move definition of max label length to a single place and export it in libsmack header file.
+  * debian: fix paths to upstream repositories.
+  * Fix three compilation warnings.
+  * libsmack: add functions for getting and setting labels from files.
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Wed, 11 Jul 2012 14:36:56 +0200
