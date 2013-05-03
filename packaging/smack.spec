@@ -60,11 +60,11 @@ rm -rf %{buildroot}/%{_docdir}
 rm -rf %{buildroot}
 
 %post
-if [ -e /etc/smack ]; then
+if [ -d /etc/smack ]; then
 	cp -r /etc/smack /opt/etc/
 	rm -rf /etc/smack
-	ln -sf /opt/etc/smack /etc/
 fi
+ln -sf /opt/etc/smack /etc/
 
 %postun -p /sbin/ldconfig
 
