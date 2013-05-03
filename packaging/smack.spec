@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s9
+Version:    1.0slp2+s11
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -91,6 +91,20 @@ rm -rf %{buildroot}
 %{_mandir}/man8/*
 
 %changelog
+* Wed Apr 24 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s11
+- libsmack: check label length in smack_revoke_subject().
+- Merge changes from upstream repository:
+  - libsmack: fallback to short labels.
+  - Declare smack_mnt as non-static in init.c.
+  - Removed dso.h.
+  - smack.service: provide [Install] section in systemd unit file.
+  - smack.mount: "WantedBy" is illegal in [Unit] context.
+  - Move cipso_free,cipso_new,cipso_apply from utils/common.c to libsmack/libsmack.c.
+  - Add support for smackfs directory: /sys/fs/smackfs/
+  - smackcipso can't set CIPSO correctly (fixes bug TDIS-3891)
+  - Run AM_PROG_AR to fix build with newer automake.
+  - disable services for new systemd versions
+
 * Thu Feb 07 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s9
 - Polish init script.
 - execute init script between local-fs.target and basic.target.
