@@ -47,7 +47,7 @@ install -D -d %{buildroot}/opt/etc/smack/cipso.d
 install -D -d %{buildroot}/etc/rc.d/rc3.d/
 install -D -d %{buildroot}/etc/rc.d/rc4.d/
 install -D init/smack.rc %{buildroot}/etc/init.d/smack-utils
-ln -sf /opt/etc/smack %{buildroot}/etc/
+#ln -sf /opt/etc/smack %{buildroot}/etc/
 ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc3.d/S01smack
 ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc4.d/S01smack
 install -D -d %{buildroot}%{_libdir}/systemd/system/local-fs.target.wants
@@ -59,7 +59,12 @@ rm -rf %{buildroot}/%{_docdir}
 %clean
 rm -rf %{buildroot}
 
-%post -p /sbin/ldconfig
+%post
+if [ -e /etc/smack ]; then
+	cp -r /etc/smack /opt/etc/
+	rm -rf /etc/smack
+	ln -sf /opt/etc/smack /etc/
+fi
 
 %postun -p /sbin/ldconfig
 
@@ -79,7 +84,7 @@ rm -rf %{buildroot}
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_bindir}/*
 %attr(755,root,root) /etc/init.d/smack-utils
-/etc/smack
+#/etc/smack
 /etc/rc.d/*
 %{_libdir}/systemd/system/%{name}.mount
 %{_libdir}/systemd/system/local-fs.target.wants/%{name}.mount
