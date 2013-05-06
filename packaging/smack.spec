@@ -59,7 +59,7 @@ rm -rf %{buildroot}/%{_docdir}
 %clean
 rm -rf %{buildroot}
 
-%post
+%post utils
 if [ -d /etc/smack ]; then
 	cp -r /etc/smack /opt/etc/
 	rm -rf /etc/smack
