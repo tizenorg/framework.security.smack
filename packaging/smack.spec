@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s9
+Version:    1.0slp2+s11
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -47,7 +47,7 @@ install -D -d %{buildroot}/opt/etc/smack/cipso.d
 install -D -d %{buildroot}/etc/rc.d/rc3.d/
 install -D -d %{buildroot}/etc/rc.d/rc4.d/
 install -D init/smack.rc %{buildroot}/etc/init.d/smack-utils
-ln -sf /opt/etc/smack %{buildroot}/etc/
+#ln -sf /opt/etc/smack %{buildroot}/etc/
 ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc3.d/S01smack
 ln -sf /etc/init.d/smack-utils %{buildroot}/etc/rc.d/rc4.d/S01smack
 install -D -d %{buildroot}%{_libdir}/systemd/system/local-fs.target.wants
@@ -59,7 +59,12 @@ rm -rf %{buildroot}/%{_docdir}
 %clean
 rm -rf %{buildroot}
 
-%post -p /sbin/ldconfig
+%post utils
+if [ -d /etc/smack ]; then
+	cp -r /etc/smack /opt/etc/
+	rm -rf /etc/smack
+fi
+ln -sf /opt/etc/smack /etc/
 
 %postun -p /sbin/ldconfig
 
@@ -79,7 +84,7 @@ rm -rf %{buildroot}
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_bindir}/*
 %attr(755,root,root) /etc/init.d/smack-utils
-/etc/smack
+#/etc/smack
 /etc/rc.d/*
 %{_libdir}/systemd/system/%{name}.mount
 %{_libdir}/systemd/system/local-fs.target.wants/%{name}.mount
@@ -91,6 +96,20 @@ rm -rf %{buildroot}
 %{_mandir}/man8/*
 
 %changelog
+* Wed Apr 24 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s11
+- libsmack: check label length in smack_revoke_subject().
+- Merge changes from upstream repository:
+  - libsmack: fallback to short labels.
+  - Declare smack_mnt as non-static in init.c.
+  - Removed dso.h.
+  - smack.service: provide [Install] section in systemd unit file.
+  - smack.mount: "WantedBy" is illegal in [Unit] context.
+  - Move cipso_free,cipso_new,cipso_apply from utils/common.c to libsmack/libsmack.c.
+  - Add support for smackfs directory: /sys/fs/smackfs/
+  - smackcipso can't set CIPSO correctly (fixes bug TDIS-3891)
+  - Run AM_PROG_AR to fix build with newer automake.
+  - disable services for new systemd versions
+
 * Thu Feb 07 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s9
 - Polish init script.
 - execute init script between local-fs.target and basic.target.
