@@ -1,3 +1,31 @@
+smack (1.0slp2+s11) unstable; urgency=low
+
+  [ Rafal Krypa ]
+  * libsmack: check label length in smack_revoke_subject().
+  * Merge changes from upstream repository.
+
+  [ Jarkko Sakkinen ]
+  * libsmack: fallback to short labels.
+  * Declare smack_mnt as non-static in init.c.
+  * Removed dso.h.
+
+  [ Auke Kok ]
+  * smack.service: provide [Install] section in systemd unit file.
+  * smack.mount: "WantedBy" is illegal in [Unit] context.
+
+  [ Passion Zhao ]
+  * Move cipso_free,cipso_new,cipso_apply from utils/common.c to libsmack/libsmack.c.
+  * Add support for smackfs directory: /sys/fs/smackfs/
+  * smackcipso can't set CIPSO correctly (fixes bug TDIS-3891)
+
+  [ Patrick McCarty ]
+  * Run AM_PROG_AR to fix build with newer automake.
+
+  [ Nathaniel Chen ]
+  * disable services for new systemd versions
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Wed, 24 Apr 2013 19:37:48 +0200
+
 smack (1.0slp2+s9) unstable; urgency=low
 
   [ Chengwei Yang ]
