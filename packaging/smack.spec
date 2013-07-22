@@ -60,7 +60,7 @@ rm -rf %{buildroot}/%{_docdir}
 rm -rf %{buildroot}
 
 %post utils
-if [ -d /etc/smack ]; then
+if [ -d /etc/smack -a ! -L /etc/smack ]; then
 	cp -r /etc/smack /opt/etc/
 	rm -rf /etc/smack
 fi
