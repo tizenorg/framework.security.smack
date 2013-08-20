@@ -39,7 +39,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#define ACC_LEN 5
+#define ACC_LEN 6
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
 
 #define LEVEL_MAX 255
@@ -52,7 +52,7 @@
 #define CIPSO_NUM_LEN_STR "%-4d"
 
 #define KERNEL_LONG_FORMAT "%s %s %s"
-#define KERNEL_SHORT_FORMAT "%-23s %-23s %5s"
+#define KERNEL_SHORT_FORMAT "%-23s %-23s %5.5s"
 #define KERNEL_MODIFY_FORMAT "%s %s %s %s"
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
@@ -791,6 +791,10 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		case 't':
 		case 'T':
 			out[4] = 't';
+			break;
+		case 'l':
+		case 'L':
+			out[5] = 'l';
 			break;
 		default:
 			break;

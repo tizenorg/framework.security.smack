@@ -1,5 +1,5 @@
 Name:       smack
-Version:    1.0slp2+s11
+Version:    1.0slp2+s12
 Release:    1
 Summary:    Package to interact with Smack
 Group:      System/Kernel
@@ -60,7 +60,7 @@ rm -rf %{buildroot}/%{_docdir}
 rm -rf %{buildroot}
 
 %post utils
-if [ -d /etc/smack ]; then
+if [ -d /etc/smack -a ! -L /etc/smack ]; then
 	cp -r /etc/smack /opt/etc/
 	rm -rf /etc/smack
 fi
@@ -96,6 +96,13 @@ ln -sf /opt/etc/smack /etc/
 %{_mandir}/man8/*
 
 %changelog
+* Tue Aug 20 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s12
+- fix directory installation problem
+- fix %post bug
+- fix smack denied issue on emulator
+- Fix symlink creation on smack-utils install.
+- libsmack: add support for new access mode for setting locks ("l")
+
 * Wed Apr 24 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s11
 - libsmack: check label length in smack_revoke_subject().
 - Merge changes from upstream repository:

@@ -1,3 +1,18 @@
+smack (1.0slp2+s12) unstable; urgency=low
+
+  [ Kidong Kim ]
+  * fix directory installation problem
+  * fix %post bug
+
+  [ Jae-young Hwang ]
+  * fix smack denied issue on emulator
+
+  [ Rafal Krypa ]
+  * Fix symlink creation on smack-utils install.
+  * libsmack: add support for new access mode for setting locks ("l")
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Tue, 20 Aug 2013 17:00:17 +0200
+
 smack (1.0slp2+s11) unstable; urgency=low
 
   [ Rafal Krypa ]
