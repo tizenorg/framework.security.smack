@@ -55,6 +55,9 @@ install -D -d %{buildroot}%{_libdir}/systemd/system/basic.target.wants
 ln -sf ../%{name}.mount %{buildroot}%{_libdir}/systemd/system/local-fs.target.wants/
 ln -sf ../%{name}.service %{buildroot}%{_libdir}/systemd/system/basic.target.wants/
 rm -rf %{buildroot}/%{_docdir}
+mkdir -p %{buildroot}/usr/share/license
+cp COPYING %{buildroot}/usr/share/license/%{name}
+cp COPYING %{buildroot}/usr/share/license/smack-utils
 
 %clean
 rm -rf %{buildroot}
@@ -71,6 +74,7 @@ ln -sf /opt/etc/smack /etc/
 %files
 %defattr(644,root,root,755)
 %{_libdir}/libsmack.so.*
+/usr/share/license/%{name}
 
 %files devel
 %defattr(644,root,root,755)
@@ -94,6 +98,7 @@ ln -sf /opt/etc/smack /etc/
 /smack/
 %{_mandir}/man1/*
 %{_mandir}/man8/*
+/usr/share/license/smack-utils
 
 %changelog
 * Tue Aug 20 2013 Rafal Krypa <r.krypa@samsung.com> - 1.0slp2+s12
