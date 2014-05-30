@@ -2,7 +2,7 @@
 /*
  * This file is part of libsmack
  *
- * Copyright (C) 2011 Intel Corporation
+ * Copyright (C) 2011, 2013 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -17,9 +17,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
- *
- * Authors:
- * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
 #include <sys/smack.h>
@@ -41,7 +38,7 @@ int main(int argc, char **argv)
 
 	ret = smack_have_access(argv[1], argv[2], argv[3]);
 	if (ret < 0) {
-		perror("smack_have_access");
+		fprintf(stderr,"%s: input values are invalid.\n", basename(argv[0]));
 		return EXIT_FAILURE;
 	}
 

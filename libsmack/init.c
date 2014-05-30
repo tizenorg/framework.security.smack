@@ -1,7 +1,7 @@
 /*
  * This file is part of libsmack. Derived from libselinux/src/init.c.
  *
- * Copyright (C) 2012 Intel Corporation
+ * Copyright (C) 2012, 2013 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -16,9 +16,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
- *
- * Authors:
- * Passion Zhao <passion.zhao@intel.com>
  */
 
 #include <unistd.h>
@@ -34,58 +31,110 @@
 #include <sys/vfs.h>
 #include <stdint.h>
 #include <limits.h>
+#include <pthread.h>
 
-/*
- *  * smackfs magic number
- *   */
-#define SMACK_MAGIC     0x43415d53 /* "SMAC" */
+#define SMACK_MAGIC	0x43415d53 /* "SMAC" */
+#define SMACKFS		"smackfs"
+#define SMACKFSMNT	"/sys/fs/smackfs/"
+#define OLDSMACKFSMNT	"/smack"
 
-/* smack file system type */
-#define SMACKFS "smackfs"
+char *smackfs_mnt = NULL;
+int smackfs_mnt_dirfd = -1;
 
-#define SMACKFSMNT "/sys/fs/smackfs/"
-#define OLDSMACKFSMNT "/smack"
+static pthread_mutex_t smackfs_mnt_lock = PTHREAD_MUTEX_INITIALIZER;
 
-char *smack_mnt = NULL;
+static int verify_smackfs_mnt(const char *mnt);
+static int smackfs_exists(void);
 
-void set_smackmnt(const char *mnt)
+int init_smackfs_mnt(void)
 {
-	smack_mnt = strdup(mnt);
+	char *buf = NULL;
+	char *startp;
+	char *endp;
+	FILE *fp = NULL;
+	size_t len;
+	ssize_t num;
+	int ret = 0;
+
+	if (smackfs_mnt ||
+	    verify_smackfs_mnt(SMACKFSMNT) == 0 ||
+	    verify_smackfs_mnt(OLDSMACKFSMNT) == 0)
+		return 0;
+
+	if (!smackfs_exists())
+		return -1;
+
+	fp = fopen("/proc/mounts", "r");
+	if (!fp)
+		return -1;
+
+	__fsetlocking(fp, FSETLOCKING_BYCALLER);
+	while ((num = getline(&buf, &len, fp)) != -1) {
+		startp = strchr(buf, ' ');
+		if (!startp) {
+			ret = -1;
+			break;
+		}
+		startp++;
+
+		endp = strchr(startp, ' ');
+		if (!endp) {
+			ret = -1;
+			break;
+		}
+
+		if (!strncmp(endp + 1, SMACKFS" ", strlen(SMACKFS) + 1)) {
+			*endp = '\0';
+			ret = verify_smackfs_mnt(startp);
+			break;
+		}
+	}
+
+	free(buf);
+	fclose(fp);
+	return ret;
 }
 
-/* Verify the mount point for smack file system has a smackfs.
- * If the file system:
- * Exist,
- * Is mounted with an smack file system,
- * The file system is read/write
- * then set this as the default file system.
- */
-static int verify_smackmnt(const char *mnt)
+static int verify_smackfs_mnt(const char *mnt)
 {
 	struct statfs sfbuf;
 	int rc;
+	int fd;
+
+	fd = open(mnt, O_RDONLY, 0);
+	if (fd < 0)
+		return -1;
 
 	do {
-		rc = statfs(mnt, &sfbuf);
+		rc = fstatfs(fd, &sfbuf);
 	} while (rc < 0 && errno == EINTR);
 
 	if (rc == 0) {
-		if ((uint32_t)sfbuf.f_type == (uint32_t)SMACK_MAGIC) {
+		if ((uint32_t) sfbuf.f_type == (uint32_t) SMACK_MAGIC) {
 			struct statvfs vfsbuf;
 			rc = statvfs(mnt, &vfsbuf);
 			if (rc == 0) {
 				if (!(vfsbuf.f_flag & ST_RDONLY)) {
-					set_smackmnt(mnt);
+					pthread_mutex_lock(&smackfs_mnt_lock);
+					if (smackfs_mnt_dirfd == -1) {
+						smackfs_mnt = strdup(mnt);
+						smackfs_mnt_dirfd = fd;
+					} else {
+						/* Some other thread won the race. */
+						close(fd);
+					}
+					pthread_mutex_unlock(&smackfs_mnt_lock);
+					return 0;
 				}
-				return 0;
 			}
 		}
 	}
 
+	close(fd);
 	return -1;
 }
 
-int smackfs_exists(void)
+static int smackfs_exists(void)
 {
 	int exists = 0;
 	FILE *fp = NULL;
@@ -93,9 +142,12 @@ int smackfs_exists(void)
 	size_t len;
 	ssize_t num;
 
+	/* Fail as SmackFS would exist since we are checking mounts after
+	 * this.
+	 */
 	fp = fopen("/proc/filesystems", "r");
 	if (!fp)
-		return 1; /* Fail as if it exists */
+		return 1;
 
 	__fsetlocking(fp, FSETLOCKING_BYCALLER);
 
@@ -113,75 +165,11 @@ int smackfs_exists(void)
 	return exists;
 }
 
-static void init_smackmnt(void)
-{
-	char *buf=NULL, *p;
-	FILE *fp=NULL;
-	size_t len;
-	ssize_t num;
-
-	if (smack_mnt)
-		return;
-
-	if (verify_smackmnt(SMACKFSMNT) == 0) 
-		return;
-
-	if (verify_smackmnt(OLDSMACKFSMNT) == 0) 
-		return;
-
-	/* Drop back to detecting it the long way. */
-	if (!smackfs_exists())
-		goto out;
-
-	/* At this point, the usual spot doesn't have an smackfs so
-	 * we look around for it */
-	fp = fopen("/proc/mounts", "r");
-	if (!fp)
-		goto out;
-
-	__fsetlocking(fp, FSETLOCKING_BYCALLER);
-	while ((num = getline(&buf, &len, fp)) != -1) {
-		char *tmp;
-		p = strchr(buf, ' ');
-		if (!p)
-			goto out;
-		p++;
-
-		tmp = strchr(p, ' ');
-		if (!tmp)
-			goto out;
-
-		if (!strncmp(tmp + 1, SMACKFS" ", strlen(SMACKFS)+1)) {
-			*tmp = '\0';
-			break;
-		}
-	}
-
-	/* If we found something, dup it */
-	if (num > 0)
-		verify_smackmnt(p);
-
-      out:
-	free(buf);
-	if (fp)
-		fclose(fp);
-	return;
-}
-
-void fini_smackmnt(void)
-{
-	free(smack_mnt);
-	smack_mnt = NULL;
-}
-
-static void init_lib(void) __attribute__ ((constructor));
-static void init_lib(void)
-{
-	init_smackmnt();
-}
-
 static void fini_lib(void) __attribute__ ((destructor));
 static void fini_lib(void)
 {
-	fini_smackmnt();
+	if (smackfs_mnt_dirfd >= 0)
+		close(smackfs_mnt_dirfd);
+	free(smackfs_mnt);
+	smackfs_mnt = NULL;
 }
