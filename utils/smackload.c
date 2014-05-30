@@ -1,7 +1,7 @@
 /*
  * This file is part of libsmack
  *
- * Copyright (C) 2011 Intel Corporation
+ * Copyright (C) 2011, 2013 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -16,16 +16,13 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
- *
- * Authors:
- * Brian McGillion <brian.mcgillion@intel.com>
- * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
 #include "common.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/smack.h>
 
 static void usage(const char *bin)
 {
@@ -38,7 +35,7 @@ int main(int argc, char **argv)
 	int clear = 0;
 	int c;
 
-	if (is_smackfs_mounted() != 1) {
+	if (!smack_smackfs_path()) {
 		fprintf(stderr, "SmackFS is not mounted.\n");
 		exit(1);
 	}
@@ -54,15 +51,11 @@ int main(int argc, char **argv)
 	}
 
 	if (optind == argc) {
-		if (apply_rules_file(STDIN_FILENO, clear)) {
-			perror("apply_rules_file");
+		if (apply_rules(NULL, clear))
 			exit(1);
-		}
 	} else {
-		if (apply_rules(argv[optind], clear)) {
-			perror("apply_rules");
+		if (apply_rules(argv[optind], clear))
 			exit(1);
-		}
 	}
 
 	exit(0);

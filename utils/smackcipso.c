@@ -1,7 +1,7 @@
 /*
  * This file is part of libsmack
  *
- * Copyright (C) 2011 Intel Corporation
+ * Copyright (C) 2011, 2012, 2013 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -16,19 +16,17 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
- *
- * Authors:
- * Brian McGillion <brian.mcgillion@intel.com>
  */
 
 #include "common.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/smack.h>
 
 int main(int argc, char **argv)
 {
-	if (is_smackfs_mounted() != 1) {
+	if (!smack_smackfs_path()) {
 		fprintf(stderr, "SmackFS is not mounted.\n");
 		exit(1);
 	}
@@ -39,15 +37,11 @@ int main(int argc, char **argv)
 	}
 
 	if (argc == 1) {
-		if (apply_cipso_file(STDIN_FILENO)) {
-			perror("apply_cipso_file");
+		if (apply_cipso(NULL))
 			exit(1);
-		}
 	} else {
-		if (apply_cipso(argv[1])) {
-			perror("apply_cipso");
+		if (apply_cipso(argv[1]))
 			exit(1);
-		}
 	}
 
 	exit(0);
