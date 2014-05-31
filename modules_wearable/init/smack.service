@@ -1,0 +1,15 @@
+[Unit]
+Description=Smack
+DefaultDependencies=no
+After=smack.mount opt.mount
+Requires=smack.mount
+Before=basic.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/smackload-fast
+ExecStop=/usr/bin/smackctl clear
+RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target
