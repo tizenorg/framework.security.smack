@@ -1,7 +1,0 @@
-[Unit]
-Description=Smack filesystem mounting
-
-[Mount]
-What=smackfs
-Where=/smack
-Type=smackfs
