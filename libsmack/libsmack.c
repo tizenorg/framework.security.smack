@@ -22,6 +22,7 @@
  * Authors:
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  * Brian McGillion <brian.mcgillion@intel.com>
+ * Passion Zhao <passion.zhao@intel.com>
  * Rafal Krypa <r.krypa@samsung.com>
  */
 
@@ -36,15 +37,27 @@
 #include <sys/types.h>
 #include <sys/xattr.h>
 #include <unistd.h>
+#include <limits.h>
 
-#define ACC_LEN 5
+#define ACC_LEN 6
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
 
-#define KERNEL_FORMAT "%s %s %s"
-#define KERNEL_FORMAT_MODIFY "%s %s %s %s"
-#define READ_BUF_SIZE LOAD_LEN + 10
-#define SMACKFS_MNT "/smack"
+#define LEVEL_MAX 255
+#define NUM_LEN 4
+#define BUF_SIZE 512
+#define CAT_MAX_COUNT 240
+#define CAT_MAX_VALUE 63
+#define CIPSO_POS(i)   (SMACK_LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
+#define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
+#define CIPSO_NUM_LEN_STR "%-4d"
+
+#define KERNEL_LONG_FORMAT "%s %s %s"
+#define KERNEL_SHORT_FORMAT "%-23s %-23s %5.5s"
+#define KERNEL_MODIFY_FORMAT "%s %s %s %s"
+#define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
+
+extern char *smack_mnt;
 
 typedef int (*getxattr_func)(void*, const char*, void*, size_t);
 typedef int (*setxattr_func)(const void*, const char*, const void*, size_t, int);
@@ -63,6 +76,19 @@ struct smack_rule {
 struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
+};
+
+struct cipso_mapping {
+	char label[SMACK_LABEL_LEN + 1];
+	int cats[CAT_MAX_VALUE];
+	int ncats;
+	int level;
+	struct cipso_mapping *next;
+};
+
+struct smack_cipso {
+	struct cipso_mapping *first;
+	struct cipso_mapping *last;
 };
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
@@ -153,12 +179,18 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
+	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
+	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
+		errno = ERANGE;
+		return -1;
+	}
+
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
-	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
+	strcpy(rule->subject, subject);
+	strcpy(rule->object, object);
 	parse_access_type(access_type, rule->access_set);
 
 	if (handle->first == NULL) {
@@ -176,12 +208,18 @@ int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject
 {
 	struct smack_rule *rule = NULL;
 
+	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
+	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
+		errno = ERANGE;
+		return -1;
+	}
+
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
-	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
+	strcpy(rule->subject, subject);
+	strcpy(rule->object, object);
 	parse_access_type(access_add, rule->access_add);
 	parse_access_type(access_del, rule->access_del);
 	rule->is_modify = 1;
@@ -257,19 +295,42 @@ int smack_have_access(const char *subject, const char *object,
 	char access_type_k[ACC_LEN + 1];
 	int ret;
 	int fd;
+	int access2 = 1;
+	char path[PATH_MAX];
+
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1; 
+	}
+	
+	snprintf(path, sizeof path, "%s/access2", smack_mnt);
+	fd = open(path, O_RDWR);
+	if (fd < 0) {
+		if (errno != ENOENT)
+			return -1;
+		
+	        snprintf(path, sizeof path, "%s/access", smack_mnt);
+		fd = open(path, O_RDWR);
+		if (fd < 0)
+			return -1;
+		access2 = 0;
+	}
 
 	parse_access_type(access_type, access_type_k);
 
-	ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, subject, object,
-		       access_type_k);
-	if (ret < 0)
-		return -1;
+	if (access2)
+		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+			       subject, object, access_type_k);
+	else
+		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+			       subject, object, access_type_k);
 
-	fd = open(SMACKFS_MNT "/access2", O_RDWR);
-	if (fd < 0)
+	if (ret < 0) {
+		close(fd);
 		return -1;
+	}
 
-	ret = write(fd, buf, LOAD_LEN);
+	ret = write(fd, buf, strlen(buf));
 	if (ret < 0) {
 		close(fd);
 		return -1;
@@ -281,6 +342,163 @@ int smack_have_access(const char *subject, const char *object,
 		return -1;
 
 	return buf[0] == '1';
+}
+void smack_cipso_free(struct smack_cipso *cipso)
+{
+	if (cipso == NULL)
+		return;
+
+	struct cipso_mapping *mapping = cipso->first;
+	struct cipso_mapping *next_mapping = NULL;
+
+	while (mapping != NULL) {
+		next_mapping = mapping->next;
+		free(mapping);
+		mapping = next_mapping;
+	}
+}
+
+struct smack_cipso *smack_cipso_new(int fd)
+{
+	struct smack_cipso *cipso = NULL;
+	struct cipso_mapping *mapping = NULL;
+	FILE *file = NULL;
+	char buf[BUF_SIZE];
+	char *label, *level, *cat, *ptr;
+	long int val;
+	int i;
+	int newfd;
+
+	newfd = dup(fd);
+	if (newfd == -1)
+		return NULL;
+
+	file = fdopen(newfd, "r");
+	if (file == NULL) {
+		close(newfd);
+		return NULL;
+	}
+
+	cipso = calloc(sizeof(struct smack_cipso ), 1);
+	if (cipso == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	while (fgets(buf, BUF_SIZE, file) != NULL) {
+		mapping = calloc(sizeof(struct cipso_mapping), 1);
+		if (mapping == NULL)
+			goto err_out;
+
+		label = strtok_r(buf, " \t\n", &ptr);
+		level = strtok_r(NULL, " \t\n", &ptr);
+		cat = strtok_r(NULL, " \t\n", &ptr);
+		if (label == NULL || cat == NULL || level == NULL ||
+		    strlen(label) > SMACK_LABEL_LEN) {
+			errno = EINVAL;
+			goto err_out;
+		}
+
+		strcpy(mapping->label, label);
+
+		errno = 0;
+		val = strtol(level, NULL, 10);
+		if (errno)
+			goto err_out;
+
+		if (val < 0 || val > LEVEL_MAX) {
+			errno = ERANGE;
+			goto err_out;
+		}
+
+		mapping->level = val;
+
+		for (i = 0; i < CAT_MAX_COUNT && cat != NULL; i++) {
+			errno = 0;
+			val = strtol(cat, NULL, 10);
+			if (errno)
+				goto err_out;
+
+			if (val < 0 || val > CAT_MAX_VALUE) {
+				errno = ERANGE;
+				goto err_out;
+			}
+
+			mapping->cats[i] = val;
+
+			cat = strtok_r(NULL, " \t\n", &ptr);
+		}
+
+		mapping->ncats = i;
+
+		if (cipso->first == NULL) {
+			cipso->first = cipso->last = mapping;
+		} else {
+			cipso->last->next = mapping;
+			cipso->last = mapping;
+		}
+	}
+
+	if (ferror(file))
+		goto err_out;
+
+	fclose(file);
+	return cipso;
+err_out:
+	fclose(file);
+	smack_cipso_free(cipso);
+	free(mapping);
+	return NULL;
+}
+
+const char *smack_smackfs_path(void)
+{
+	return smack_mnt;
+}
+
+int smack_cipso_apply(struct smack_cipso *cipso)
+{
+	struct cipso_mapping *m = NULL;
+	char buf[CIPSO_MAX_SIZE];
+	int fd;
+	int i;
+	char path[PATH_MAX];
+	int offset=0;
+
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1; 
+	}
+	
+	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+ 	memset(buf,0,CIPSO_MAX_SIZE);
+	for (m = cipso->first; m != NULL; m = m->next) {
+ 		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
+ 		offset += strlen(buf) + 1;
+  
+ 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
+ 		offset += NUM_LEN;
+  
+ 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->ncats);
+ 		offset += NUM_LEN;
+ 
+ 		for (i = 0; i < m->ncats; i++){
+ 			sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->cats[i]);
+ 			offset += NUM_LEN;
+ 		}
+ 		
+ 		if (write(fd, buf, offset) < 0) {
+			close(fd);
+			return -1;
+		}
+	}
+
+	close(fd);
+	return 0;
 }
 
 int smack_new_label_from_self(char **label)
@@ -321,7 +539,7 @@ int smack_new_label_from_socket(int fd, char **label)
 	if (ret < 0 && errno != ERANGE)
 		return -1;
 
-	result = calloc(length, 1);
+	result = calloc(length + 1, 1);
 	if (result == NULL)
 		return -1;
 
@@ -359,12 +577,19 @@ int smack_revoke_subject(const char *subject)
 {
 	int ret;
 	int fd;
+	int len;
+	char path[PATH_MAX];
 
-	fd = open(SMACKFS_MNT "/revoke-subject", O_RDWR);
+	len = strnlen(subject, SMACK_LABEL_LEN + 1);
+	if (len > SMACK_LABEL_LEN)
+		return -1;
+
+	snprintf(path, sizeof path, "%s/revoke-subject", smack_mnt);
+	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
 
-	ret = write(fd, subject, strnlen(subject, SMACK_LABEL_LEN));
+	ret = write(fd, subject, len);
 	close(fd);
 
 	return (ret < 0) ? -1 : 0;
@@ -400,6 +625,7 @@ static int internal_setlabel(void* file, const char* label,
 		setxattr_func setfunc, removexattr_func removefunc)
 {
 	char* xattr_name = get_xattr_name(type);
+	int ret;
 
 	/* Check validity of labels for LABEL_TRANSMUTE */
 	if (type == SMACK_LABEL_TRANSMUTE && label != NULL) {
@@ -412,7 +638,10 @@ static int internal_setlabel(void* file, const char* label,
 	}
 
 	if (label == NULL || label[0] == '\0') {
-		return removefunc(file, label);
+		ret = removefunc(file, xattr_name);
+		if (ret == -1 && errno == ENODATA)
+			return 0;
+		return ret;
 	} else {
 		int len = strnlen(label, SMACK_LABEL_LEN + 1);
 		if (len > SMACK_LABEL_LEN)
@@ -471,52 +700,78 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int fd;
 	int load_fd;
 	int change_fd;
-	int size;
+	int load2 = 1;
+	char path[PATH_MAX];
 
-	load_fd = open(SMACKFS_MNT "/load2", O_WRONLY);
-	if (load_fd < 0)
-		return -1;
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1; 
+	}
+	
+	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	load_fd = open(path, O_WRONLY);
+	if (load_fd < 0) {
+		if (errno != ENOENT)
+			return -1;
+		/* fallback */
+	        snprintf(path, sizeof path, "%s/load", smack_mnt);
+		load_fd = open(path, O_WRONLY);
+		/* Try to continue if the file doesn't exist, we might not need it. */
+		if (load_fd < 0 && errno != ENOENT)
+			return -1;
+		load2 = 0;
+	}
 
-	change_fd = open(SMACKFS_MNT "/change-rule", O_WRONLY);
-	if (change_fd < 0) {
-		close(load_fd);
-		return -1;
+	snprintf(path, sizeof path, "%s/change-rule", smack_mnt);
+	change_fd = open(path, O_WRONLY);
+	/* Try to continue if the file doesn't exist, we might not need it. */
+	if (change_fd < 0 && errno != ENOENT) {
+		ret = -1;
+		goto err_out;
 	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		fd = load_fd;
 		if (clear) {
-			size = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, "-----");
+			strcpy(rule->access_set, "-----");
+			rule->is_modify = 0;
+		}
+
+		if (rule->is_modify) {
+			fd = change_fd;
+			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
+						rule->subject, rule->object,
+						rule->access_add, rule->access_del);
 		} else {
-
-			if (rule->is_modify) {
-				fd = change_fd;
-				size = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT_MODIFY,
-						rule->subject, rule->object, rule->access_add, rule->access_del);
-
-			} else {
-				size = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT,
-						rule->subject, rule->object, rule->access_set);
-			}
+			fd = load_fd;
+			if (load2)
+				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+					       rule->subject, rule->object,
+					       rule->access_set);
+			else
+				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+					       rule->subject, rule->object,
+					       rule->access_set);
 		}
 
-		if (size == -1 || size > LOAD_LEN) {
-			close(load_fd);
-			close(change_fd);
-			return -1;
+		if (ret < 0 || fd < 0) {
+			ret = -1;
+			goto err_out;
 		}
 
-		ret = write(fd, buf, size);
+		ret = write(fd, buf, strlen(buf));
 		if (ret < 0) {
-			close(load_fd);
-			close(change_fd);
-			return -1;
+			ret = -1;
+			goto err_out;
 		}
 	}
+	ret = 0;
 
-	close(load_fd);
-	close(change_fd);
-	return 0;
+err_out:
+	if (load_fd >= 0)
+		close(load_fd);
+	if (change_fd >= 0)
+		close(change_fd);
+	return ret;
 }
 
 static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
@@ -527,7 +782,7 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		out[i] = '-';
 	out[ACC_LEN] = '\0';
 
-	for (i = 0; i < ACC_LEN && in[i] != '\0'; i++)
+	for (i = 0; in[i] != '\0'; i++)
 		switch (in[i]) {
 		case 'r':
 		case 'R':
@@ -548,6 +803,10 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		case 't':
 		case 'T':
 			out[4] = 't';
+			break;
+		case 'l':
+		case 'L':
+			out[5] = 'l';
 			break;
 		default:
 			break;

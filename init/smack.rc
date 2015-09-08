@@ -60,24 +60,32 @@ case "$1" in
    start)
 	echo -n "Starting $DESC ..."
 	mount_smack
-	/usr/bin/smackctl apply
-	echo " done."
+	if /usr/bin/smackctl apply ; then
+		echo " done."
+	else
+		echo " failed."
+	fi
 	;;
    status)
-	if [ ! -e /smack/load2 ] ; then
-		exit -1
-	fi
+	/usr/bin/smackctl status
 	;;
    reload|force-reload|restart|try-restart)
 	echo -n "Reloading $DESC ..."
-	/usr/bin/smackctl clear
-	/usr/bin/smackctl apply
-	echo " done."
+	if /usr/bin/smackctl clear && /usr/bin/smackctl apply ; then
+		echo " done."
+	else
+		echo " failed."
+	fi
 	;;
    stop)
 	echo -n "Stopping $DESC ..."
-	/usr/bin/smackctl clear
-	echo " done."
+	# umount /smack to make sure "status" reports the correct state
+	# of smack because it only check if smackfs mounted or not.
+	if /usr/bin/smackctl clear && umount /smack ; then
+		echo " done."
+	else
+		echo " failed."
+	fi
 	;;
    *)
 	echo $"Usage: $0 {start|stop|reload|force-reload|restart|try-restart|status}"
