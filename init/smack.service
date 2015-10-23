@@ -10,6 +10,7 @@ Type=oneshot
 ExecStart=/usr/bin/smackload-fast
 ExecStop=/usr/bin/smackctl clear
 RemainAfterExit=yes
+SmackProcessLabel=system::smack-utils::script
 
 [Install]
 WantedBy=basic.target

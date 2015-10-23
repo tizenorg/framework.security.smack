@@ -12,6 +12,7 @@ Source3:    smack-utils.manifest
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires: automake autoconf libtool
+Provides: libsmack
 
 %description
 Library allows applications to work with Smack
@@ -39,7 +40,8 @@ Tools provided to load and unload rules from the kernel and query the policy
 autoreconf --install --symlink
 
 %build
-%configure --with-systemdsystemunitdir=%{_libdir}/systemd/system
+%configure --with-systemdsystemunitdir=%{_libdir}/systemd/system CFLAGS=-fPIE LDFLAGS=-pie
+
 make %{?_smp_mflags}
 
 %install

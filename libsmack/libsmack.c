@@ -57,6 +57,8 @@
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
+#define DICT_HASH_SIZE 4096
+
 extern char *smack_mnt;
 
 typedef int (*getxattr_func)(void*, const char*, void*, size_t);
@@ -475,8 +477,10 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	if (fd < 0)
 		return -1;
 
- 	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
+ 	        memset(buf,0,CIPSO_MAX_SIZE);
+                offset = 0;
+
  		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
  		offset += strlen(buf) + 1;
   
@@ -833,4 +837,100 @@ static inline char* get_xattr_name(enum smack_label_type type)
 		return NULL;
 	}
 
+}
+
+static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash)
+{
+	int i;
+	unsigned int h = 5381;/*DJB2 hashing function magic number*/;
+
+	if (!src || src[0] == '\0' || src[0] == '-')
+		return -1;
+
+	for (i = 0; i < (SMACK_LABEL_LEN + 1) && src[i]; i++) {
+		if (src[i] <= ' ' || src[i] > '~')
+			return -1;
+		switch (src[i]) {
+		case '/':
+		case '"':
+		case '\\':
+		case '\'':
+			return -1;
+		default:
+			break;
+		}
+
+		if (dest)
+			dest[i] = src[i];
+		if (hash)
+			/* This efficient hash function,
+			 * created by Daniel J. Bernstein,
+			 * is known as DJB2 algorithm */
+			h = (h << 5) + h + src[i];
+	}
+
+	if (dest && i < (SMACK_LABEL_LEN + 1))
+		dest[i] = '\0';
+	if (hash)
+		*hash = h % DICT_HASH_SIZE;
+
+	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
+}
+
+ssize_t smack_label_length(const char *label)
+{
+	return get_label(NULL, label, NULL);
+}
+
+ssize_t smack_new_label_from_path(const char *path, const char *xattr,
+				  int follow, char **label)
+{
+	char buf[SMACK_LABEL_LEN + 1];
+	char *result;
+	ssize_t ret = 0;
+
+	ret = follow ?
+		getxattr(path, xattr, buf, SMACK_LABEL_LEN + 1) :
+		lgetxattr(path, xattr, buf, SMACK_LABEL_LEN + 1);
+	if (ret < 0)
+		return -1;
+	buf[ret] = '\0';
+
+	result = calloc(ret + 1, 1);
+	if (result == NULL)
+		return -1;
+
+	ret = get_label(result, buf, NULL);
+	if (ret < 0) {
+		free(result);
+		return -1;
+	}
+
+	*label = result;
+	return ret;
+}
+
+int smack_set_label_for_path(const char *path,
+				  const char *xattr,
+				  int follow,
+				  const char *label)
+{
+	int len;
+	int ret;
+
+	len = (int)smack_label_length(label);
+	if (len < 0)
+		return -2;
+
+	ret = follow ?
+		setxattr(path, xattr, label, len, 0) :
+		lsetxattr(path, xattr, label, len, 0);
+	return ret;
+}
+
+int smack_remove_label_for_path(const char *path,
+				  const char *xattr,
+				  int follow)
+{
+	return follow ? removexattr(path, xattr) : lremovexattr(path, xattr);
 }

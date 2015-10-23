@@ -23,6 +23,10 @@ global:
 	smack_setlabel;
 	smack_lsetlabel;
 	smack_fsetlabel;
+	smack_label_length;
+	smack_new_label_from_path;
+	smack_set_label_for_path;
+	smack_remove_label_for_path;
 local:
 	*;
 };
